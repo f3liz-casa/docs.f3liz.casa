@@ -11,7 +11,7 @@
 # private の repo は org の **GitHub App** で引く ── その場かぎりの installation
 # token を一個作る。人の PAT は要らず、期限も自動で切れる。名指しした repo しか
 # 見えない token なので、build は private のときだけ載せる(public は未認証で読める)。
-# secret は DOCS_APP_ID と DOCS_APP_PRIVATE_KEY。無ければ private を飛ばして、
+# secret は DOCS_APP_CLIENT_ID と DOCS_APP_PRIVATE_KEY。無ければ private を飛ばして、
 # 公開の面だけを配る。
 name: sync
 on:
@@ -35,8 +35,8 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: jdx/mise-action@v2
+      - uses: actions/checkout@v5
+      - uses: jdx/mise-action@v4
       - run: npm ci --silent || npm install --silent
 
       # private(memo / kotoba-cms)を読む鍵。短命で、その二つにだけ効く。
@@ -44,7 +44,7 @@ jobs:
         id: app
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets.DOCS_APP_ID }}
+          client-id: ${{ secrets.DOCS_APP_CLIENT_ID }}
           private-key: ${{ secrets.DOCS_APP_PRIVATE_KEY }}
           owner: f3liz-casa
           repositories: memo,kotoba-cms

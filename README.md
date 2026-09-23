@@ -56,7 +56,7 @@ private は `private = true`(Actions の `secrets.DOCS_TOKEN` で引く)。
 
 | 名前 | 何のため |
 |---|---|
-| `DOCS_APP_ID` | private repo を引く GitHub App の id |
+| `DOCS_APP_CLIENT_ID` | private repo を引く GitHub App の Client ID |
 | `DOCS_APP_PRIVATE_KEY` | 同じ App の秘密鍵(workflow が短命の token に交換する) |
 | `CLOUDFLARE_API_TOKEN` | `wrangler deploy` |
 | `CLOUDFLARE_ACCOUNT_ID` | 同上 |
