@@ -1,0 +1,123 @@
+# どこから何を引くか。ここだけが手で書く一枚で、site はここから生成する。
+#
+# 拾うのは **散文**(.md / .mdx)だけ。画像は本文が参照しているものを写す(直感的に
+# 掴む助けになるなら載せる)。各 repo は自分の `.docs.toml` で「隠す / 並び / 説明」を
+# 上書きできる ── 主導権は書いた側にある。
+#
+# private の repo は `private = true`。引くのに `DOCS_TOKEN`(Actions の secret)が要り、
+# 無ければ黙って飛ばす(公開の面を壊さない)。
+#
+# include は「これに当たるものを拾う」、exclude は「これを外す」。node_modules / dist /
+# _build / _stage / vendor / .git は、書かなくても常に外れる。
+
+[[source]]
+org = "f3liz-casa"
+repo = "noraneko-registry"
+ref = "main"
+title = "noraneko registry"
+description = "drop(コードで降ってくる機能)の台帳。表(ABI)・殻・build の作法"
+order = 10
+include = ["README.md", "docs/**/*.md", "abi/v1.json"]
+
+[[source]]
+org = "f3liz-casa"
+repo = "noraneko"
+ref = "main"
+title = "noraneko"
+description = "artifact で組み立てるテストベッドのブラウザ"
+order = 20
+include = ["README.md", "docs/**/*.md"]
+
+[[source]]
+org = "nyanrus"
+repo = "tsubaki"
+ref = "main"
+title = "Tsubaki"
+description = "Julia の書き心地の小さな言語。WasmGC に落ちる"
+order = 30
+include = ["README.md", "docs/**/*.md"]
+
+[[source]]
+org = "f3liz-casa"
+repo = "senga"
+ref = "main"
+title = "senga"
+description = "Servo 越しに HTML+CSS を text に。良く測る読み手のために"
+order = 40
+include = ["README.md", "docs/**/*.md"]
+
+[[source]]
+org = "f3liz-casa"
+repo = "hayate"
+ref = "main"
+title = "hayate"
+description = "Julia の QUIC / WebTransport(msquic)"
+order = 50
+include = ["README.md", "docs/**/*.md"]
+
+[[source]]
+org = "f3liz-casa"
+repo = "kaguya"
+ref = "main"
+title = "kaguya"
+description = "fediverse のクライアント"
+order = 60
+include = ["README.md", "docs/**/*.md", "packages/*/README.md", "packages/*/docs/**/*.md"]
+
+[[source]]
+org = "f3liz-casa"
+repo = "yukari-rubi"
+ref = "main"
+title = "yukari-rubi"
+description = "ルビを振る"
+order = 70
+include = ["README.md", "docs/**/*.md"]
+
+[[source]]
+org = "f3liz-casa"
+repo = "danro-talk"
+ref = "main"
+title = "danro-talk"
+description = "Zulip / Discord へ橋を架ける、非同期のチャット widget"
+order = 80
+include = ["README.md", "docs/**/*.md"]
+
+[[source]]
+org = "f3liz-casa"
+repo = "mazemaze-api"
+ref = "main"
+title = "mazemaze-api"
+description = "一つの Melange runtime から、いくつもの型付き fediverse API 面を"
+order = 90
+include = ["README.md", "docs/**/*.md"]
+
+[[source]]
+org = "f3liz-casa"
+repo = "koto-cms"
+ref = "main"
+title = "koto-cms"
+description = "小さな CMS"
+order = 100
+include = ["README.md", "docs/**/*.md"]
+
+# --- private(token が要る)。**出す**と決めたものだけを並べる ---
+# private = true は「引くのに DOCS_TOKEN が要る」の印で、出す・出さないは
+# ここに書いたかどうかで決まる。koe は出さない(並べない)。
+
+[[source]]
+org = "f3liz-casa"
+repo = "memo"
+ref = "main"
+title = "memo"
+order = 210
+private = true
+include = ["*.md", "docs/**/*.md"]
+
+[[source]]
+org = "f3liz-casa"
+repo = "kotoba-cms"
+ref = "main"
+title = "kotoba-cms"
+order = 220
+private = true
+include = ["*.md", "docs/**/*.md"]

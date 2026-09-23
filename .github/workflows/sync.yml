@@ -1,0 +1,49 @@
+# 引いて、組んで、配る。これ一つ。
+#
+#   手で:   gh workflow run sync.yml -R f3liz-casa/docs.f3liz.casa
+#           gh run watch -R f3liz-casa/docs.f3liz.casa
+#   source の push から: その repo の workflow に一行
+#           gh api repos/f3liz-casa/docs.f3liz.casa/dispatches \
+#             -f event_type=docs -f client_payload[repo]=<repo>
+#           (下の repository_dispatch が受ける)
+#   夜も一度(schedule)。取りこぼしは翌朝、勝手に直る。
+#
+# private の repo は secrets.DOCS_TOKEN で引く(fine-grained PAT / GitHub App)。
+# 無ければ build がそれを飛ばして、公開の面だけを配る。
+name: sync
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 18 * * *" # 18:00 UTC = 03:00 JST
+  repository_dispatch:
+    types: [docs]
+  push:
+    branches: [main]
+    paths: ["sources.toml", "scripts/**", "templates/**", "theme/**", "wrangler.toml", ".github/workflows/sync.yml"]
+
+concurrency:
+  group: sync
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+      - run: npm ci --silent || npm install --silent
+
+      - name: 引いて、組む
+        env:
+          DOCS_TOKEN: ${{ secrets.DOCS_TOKEN }}
+          DOCS_BASE: https://docs.f3liz.casa
+        run: npm run build
+
+      - name: 配る
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy

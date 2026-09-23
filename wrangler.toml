@@ -1,0 +1,11 @@
+name = "docs-f3liz-casa"
+compatibility_date = "2025-01-01"
+
+# 静的な一枚。worker のコードは持たず、dist/(生成物)を配るだけ。
+# 生 Markdown の content-type と sitemap は dist/_headers と dist/ の中身で。
+[assets]
+directory = "./dist"
+
+[[routes]]
+pattern = "docs.f3liz.casa"
+custom_domain = true

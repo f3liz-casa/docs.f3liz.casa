@@ -1,0 +1,3 @@
+# build と deploy は node / wrangler(wrangler は npm の devDependency)。
+[tools]
+node = "22"
