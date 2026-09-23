@@ -13,6 +13,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { parse as parseToml } from "smol-toml";
 import MarkdownIt from "markdown-it";
+import markdownItShiki from "@shikijs/markdown-it";
 import { selected } from "./lib/globs.mjs";
 import { renderPage, renderHome } from "../templates/page.mjs";
 
@@ -106,7 +107,7 @@ function descriptionOf(body) {
 }
 
 // ── 組む ────────────────────────────────────────────────────────────────────
-function makeMd() {
+async function makeMd() {
   const md = new MarkdownIt({ html: false, linkify: false, breaks: false, typographer: false });
   md.renderer.rules.link_open = (tokens, idx, opts, env, self) => {
     const i = tokens[idx].attrIndex("href");
@@ -124,9 +125,15 @@ function makeMd() {
     }
     return self.renderToken(tokens, idx, opts);
   };
+  // Shiki。明暗ぶんの色を CSS 変数で出し、どちらを出すかは style.css が決める
+  // (defaultColor: false = 直に色を書かず、変数だけ置く)。
+  md.use(await markdownItShiki({
+    themes: { light: "github-light", dark: "github-dark" },
+    defaultColor: false,
+    fallbackLanguage: "text",
+  }));
   return md;
 }
-const md = makeMd();
 
 /** 相対の .md リンクを site の URL に。site の中の頁に当たらなければ、そのまま */
 function resolveLink(href, doc) {
@@ -154,6 +161,7 @@ function copyImage(src, doc) {
 async function main() {
   const cfg = parseToml(fs.readFileSync(path.join(ROOT, "sources.toml"), "utf8"));
   const sources = [...cfg.source].sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+  const md = await makeMd();
 
   fs.rmSync(DIST, { recursive: true, force: true });
   fs.mkdirSync(DIST, { recursive: true });
