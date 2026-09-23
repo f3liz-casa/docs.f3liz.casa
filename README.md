@@ -56,8 +56,13 @@ private は `private = true`(Actions の `secrets.DOCS_TOKEN` で引く)。
 
 | 名前 | 何のため |
 |---|---|
-| `DOCS_TOKEN` | private repo を引く(fine-grained PAT / GitHub App) |
+| `DOCS_APP_ID` | private repo を引く GitHub App の id |
+| `DOCS_APP_PRIVATE_KEY` | 同じ App の秘密鍵(workflow が短命の token に交換する) |
 | `CLOUDFLARE_API_TOKEN` | `wrangler deploy` |
 | `CLOUDFLARE_ACCOUNT_ID` | 同上 |
 
-`DOCS_TOKEN` が無いと、private の source は黙って飛ばす(公開の面は壊さない)。
+App は org(f3liz-casa)に一つ作り、`memo` / `kotoba-cms` に **Contents: Read** を
+付けて install する。`sync.yml` が `actions/create-github-app-token` でその場かぎりの
+token を作り、build が **private のときだけ**載せる(名指しした repo しか見えない
+token なので、public に載せると 404 になる)。無ければ private の source は黙って
+飛ばす(公開の面は壊さない)。

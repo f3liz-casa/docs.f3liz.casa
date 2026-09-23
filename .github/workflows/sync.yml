@@ -8,8 +8,11 @@
 #           (下の repository_dispatch が受ける)
 #   夜も一度(schedule)。取りこぼしは翌朝、勝手に直る。
 #
-# private の repo は secrets.DOCS_TOKEN で引く(fine-grained PAT / GitHub App)。
-# 無ければ build がそれを飛ばして、公開の面だけを配る。
+# private の repo は org の **GitHub App** で引く ── その場かぎりの installation
+# token を一個作る。人の PAT は要らず、期限も自動で切れる。名指しした repo しか
+# 見えない token なので、build は private のときだけ載せる(public は未認証で読める)。
+# secret は DOCS_APP_ID と DOCS_APP_PRIVATE_KEY。無ければ private を飛ばして、
+# 公開の面だけを配る。
 name: sync
 on:
   workflow_dispatch:
@@ -36,9 +39,20 @@ jobs:
       - uses: jdx/mise-action@v2
       - run: npm ci --silent || npm install --silent
 
+      # private(memo / kotoba-cms)を読む鍵。短命で、その二つにだけ効く。
+      - name: App のトークン
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.DOCS_APP_ID }}
+          private-key: ${{ secrets.DOCS_APP_PRIVATE_KEY }}
+          owner: f3liz-casa
+          repositories: memo,kotoba-cms
+          permission-contents: read
+
       - name: 引いて、組む
         env:
-          DOCS_TOKEN: ${{ secrets.DOCS_TOKEN }}
+          DOCS_TOKEN: ${{ steps.app.outputs.token }}
           DOCS_BASE: https://docs.f3liz.casa
         run: npm run build
 

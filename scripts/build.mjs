@@ -40,21 +40,23 @@ const sha256 = (s) => createHash("sha256").update(s).digest("hex").slice(0, 16);
 const oneLine = (s) => String(s ?? "").replace(/\s+/g, " ").trim();
 
 // ── 取る ────────────────────────────────────────────────────────────────────
-async function ghJson(org, repo, ref) {
+// token は **private のときだけ**載せる。App の token は名指しした repo しか
+// 見えないので、public に載せると 404 になる(public は未認証で読める)。
+async function ghJson(org, repo, ref, useToken) {
   const url = `https://api.github.com/repos/${org}/${repo}/commits/${encodeURIComponent(ref)}`;
-  const res = await fetch(url, { headers: headers(), redirect: "follow" });
+  const res = await fetch(url, { headers: headers(useToken), redirect: "follow" });
   if (!res.ok) throw new Error(`${org}/${repo}@${ref}: commit ${res.status}`);
   const j = await res.json();
   return { sha: j.sha, date: j.commit?.committer?.date ?? "" };
 }
-function headers() {
+function headers(useToken) {
   const h = { "User-Agent": "docs.f3liz.casa", Accept: "application/vnd.github+json" };
-  if (TOKEN) h.Authorization = `Bearer ${TOKEN}`;
+  if (useToken && TOKEN) h.Authorization = `Bearer ${TOKEN}`;
   return h;
 }
-async function tarball(org, repo, ref) {
+async function tarball(org, repo, ref, useToken) {
   const url = `https://api.github.com/repos/${org}/${repo}/tarball/${encodeURIComponent(ref)}`;
-  const res = await fetch(url, { headers: headers(), redirect: "follow" });
+  const res = await fetch(url, { headers: headers(useToken), redirect: "follow" });
   if (!res.ok) throw new Error(`${org}/${repo}@${ref}: tarball ${res.status}`);
   return Buffer.from(await res.arrayBuffer());
 }
@@ -170,8 +172,9 @@ async function main() {
       continue;
     }
     try {
-      const { sha, date } = await ghJson(org, repo, ref);
-      const root = extract(await tarball(org, repo, ref), prefix);
+      const useToken = !!src.private;
+      const { sha, date } = await ghJson(org, repo, ref, useToken);
+      const root = extract(await tarball(org, repo, ref, useToken), prefix);
 
       // その repo の .docs.toml(docs を書いた側の申告)。hide / description / order
       const local = readLocalDocs(root);
