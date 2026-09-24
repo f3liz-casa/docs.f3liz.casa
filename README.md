@@ -35,7 +35,11 @@ gh run watch -R f3liz-casa/docs.f3liz.casa
 ## 何を引くか
 
 `sources.toml` に `[[source]]` を一つ足す(`org` / `repo` / `ref` / `title` / `include`)。
-private は `private = true`(Actions の `secrets.DOCS_TOKEN` で引く)。
+引くのは散文 ── **`.md` / `.mdx` / `.mdoc`**。private は `private = true`(org の GitHub App で引く。secret は下)。
+
+- 本文の相対リンクは、引いた頁なら site の URL に、実物なら **GitHub のその commit** に張り替える。
+- **root 相対の内部リンク**(`.mdoc` の記事の `/ja/slug/` など)は、その repo の頁の route に照合する。
+  `strip = "blog/src/content/posts/"` のように書くと、URL と route の前を落として短くできる。
 
 各 repo は自分の `.docs.toml` で上書きできる ── `hide = [...]` / `title` / `description`。
 **docs を書いた側が、出しかたを決める。**

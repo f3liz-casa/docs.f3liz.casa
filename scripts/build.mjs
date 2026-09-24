@@ -34,12 +34,13 @@ const ALWAYS_EXCLUDE = [
   "**/node_modules/**", "**/.git/**", "**/dist/**", "**/_build/**", "**/_stage/**",
   "**/vendor/**", "**/target/**", "**/.wrangler/**", "**/source/**", "**/coverage/**",
 ];
-const TEXT = /\.(md|mdx)$/i;
+const TEXT = /\.(md|mdx|mdoc)$/i;
 const MAX_BYTES = 512 * 1024;
 
 const log = (...a) => console.log(...a);
 const sha256 = (s) => createHash("sha256").update(s).digest("hex").slice(0, 16);
 const oneLine = (s) => String(s ?? "").replace(/\s+/g, " ").trim();
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // ── 取る ────────────────────────────────────────────────────────────────────
 // token は **private のときだけ**載せる。App の token は名指しした repo しか
@@ -160,7 +161,17 @@ async function makeMd() {
  * 「.md じゃないから 404」を作らないのがここの役目。
  */
 function resolveLink(href, doc) {
-  if (!href || /^([a-z][a-z0-9+.-]*:|\/\/|#|\/)/i.test(href)) return null;
+  if (!href) return null;
+  // root 相対。この repo の頁の route に当たれば、その頁の URL へ。
+  // `.mdoc` の記事が `/ja/slug/` のように書く内部リンクのため(blog の作法)。
+  // 当たらなければ触らない(既に正しい site の path かもしれない)。
+  if (href.startsWith("/") && !href.startsWith("//")) {
+    const [pathPart, hash = ""] = href.split("#");
+    const route = pathPart.replace(/^\/+|\/+$/g, "");
+    const found = doc.byRoute?.get(route);
+    return found ? found.url + (hash ? `#${hash}` : "") : null;
+  }
+  if (/^([a-z][a-z0-9+.-]*:|\/\/|#)/i.test(href)) return null;
   const [targetRaw, hash = ""] = href.split("#");
   if (!targetRaw) return null;
   const rel = path.posix.normalize(path.posix.join(path.posix.dirname(doc.path), decodeURIComponent(targetRaw)));
@@ -227,28 +238,33 @@ async function main() {
         .filter((p) => TEXT.test(p) || p.endsWith(".json"))
         .sort();
 
+      const stripRe = src.strip ? new RegExp("^" + escapeRe(src.strip)) : null;
       const docs = [];
       for (const p of files) {
         const from = path.join(root, p);
         if (fs.statSync(from).size > MAX_BYTES) { log(`big   ${prefix}/${p} は大きすぎるので飛ばす`); continue; }
         const { data, body } = frontmatter(fs.readFileSync(from, "utf8"));
         if (data.docs === "false" || data.hidden === "true") continue;
+        const key = stripRe ? p.replace(stripRe, "") : p;
+        const isReadme = key.toLowerCase() === "readme.md";
         docs.push({
-          org, repo, ref, commit: sha, root, prefix, path: p, data, body,
+          org, repo, ref, commit: sha, root, prefix, path: p, key, data, body,
           title: titleOf(body, data, p),
           description: data.description ?? "",
           order: data.order ? Number(data.order) : 999,
-          url: p.toLowerCase() === "readme.md" ? `/${prefix}/` : `/${prefix}/${p.replace(TEXT, "")}`,
+          url: isReadme ? `/${prefix}/` : `/${prefix}/${key.replace(TEXT, "")}`,
+          route: isReadme ? "" : key.replace(TEXT, ""),
           rawUrl: `/raw/${prefix}/${p}`,
-          rawOnly: !TEXT.test(p), // json などは頁にせず、原文(raw)と index にだけ置く
+          rawOnly: !TEXT.test(p),
           hash: sha256(body),
-          index: null, // あとで張る
+          index: null, byRoute: null, // あとで張る
         });
       }
       if (docs.length === 0) { log(`--    ${prefix}: 拾うものが無い`); status.push({ org, repo, ref, commit: sha, files: 0 }); continue; }
 
       const index = new Map(docs.map((d) => [d.path, d]));
-      for (const d of docs) d.index = index;
+      const byRoute = new Map(docs.map((d) => [d.route, d]));
+      for (const d of docs) { d.index = index; d.byRoute = byRoute; }
       docs.sort((a, b) => (a.path === "README.md" ? -1 : b.path === "README.md" ? 1 : a.order - b.order || a.path.localeCompare(b.path)));
 
       // 原文はここで置く(頁は、全部の repo が集まってから。nav が一枚の木になるように)
@@ -256,7 +272,8 @@ async function main() {
 
       const title = local.title ?? src.title ?? repo;
       const description = local.description ?? src.description ?? "";
-      groups.push({ org, repo, title, description, url: `/${prefix}/`, docs });
+      const front = docs.find((d) => d.path.toLowerCase() === "readme.md");
+      groups.push({ org, repo, title, description, url: front ? `/${prefix}/` : docs[0].url, docs });
       status.push({ org, repo, ref, commit: sha, date, files: docs.length });
       const was = prev.find((s) => s.org === org && s.repo === repo);
       const moved = was?.commit && was.commit !== sha ? ` (${was.commit.slice(0, 7)}→${sha.slice(0, 7)})` : "";

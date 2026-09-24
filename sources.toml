@@ -100,6 +100,18 @@ description = "小さな CMS"
 order = 100
 include = ["README.md", "docs/**/*.md"]
 
+# `.mdoc` の記事。`strip` で URL を短く、route を記事の道に合わせるので、本文の
+# `/ja/slug/` のような root 相対の内部リンクが、そのまま site の URL に届く。
+[[source]]
+org = "f3liz-casa"
+repo = "atfedi-de"
+ref = "main"
+title = "atfedi-de blog"
+description = "sukhi-fedi のことなど、書いたもの"
+order = 110
+strip = "blog/src/content/posts/"
+include = ["blog/src/content/posts/**/*.mdoc"]
+
 # --- private(token が要る)。**出す**と決めたものだけを並べる ---
 # private = true は「引くのに DOCS_TOKEN が要る」の印で、出す・出さないは
 # ここに書いたかどうかで決まる。koe は出さない(並べない)。
