@@ -11,9 +11,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { pathToFileURL } from "node:url";
 import { parse as parseToml } from "smol-toml";
 import MarkdownIt from "markdown-it";
 import markdownItShiki from "@shikijs/markdown-it";
+import githubAlerts from "markdown-it-github-alerts";
 import { selected } from "./lib/globs.mjs";
 import { renderPage, renderHome } from "../templates/page.mjs";
 
@@ -126,15 +128,6 @@ async function makeMd() {
     }
     return self.renderToken(tokens, idx, opts);
   };
-  // 見出しに id。節ごとに URL で指せるように(日本語はそのまま、記号だけ - に)
-  md.renderer.rules.heading_open = (tokens, idx, opts, env, self) => {
-    const inline = tokens[idx + 1];
-    if (inline?.type === "inline") {
-      const slug = slugify(inline.content);
-      if (slug) tokens[idx].attrSet("id", slug);
-    }
-    return self.renderToken(tokens, idx, opts);
-  };
   md.renderer.rules.image = (tokens, idx, opts, env, self) => {
     const i = tokens[idx].attrIndex("src");
     if (i >= 0) {
@@ -150,7 +143,39 @@ async function makeMd() {
     defaultColor: false,
     fallbackLanguage: "text",
   }));
+  // GitHub の alert(`> [!NOTE]` など)。GitHub でも同じに見えるので、docs も素直。
+  md.use(githubAlerts);
+  // mermaid は Shiki に渡さず、素のまま残す。描くのは頁の script(要る頁だけ読む)。
+  const fence = md.renderer.rules.fence;
+  md.renderer.rules.fence = (tokens, idx, opts, env, self) => {
+    const token = tokens[idx];
+    const lang = (token.info ?? "").trim().split(/\s+/)[0];
+    if (lang === "mermaid") {
+      if (env) env.hasMermaid = true;
+      return `<pre class="mermaid">${md.utils.escapeHtml(token.content)}</pre>\n`;
+    }
+    return fence ? fence(tokens, idx, opts, env, self)
+      : `<pre><code>${md.utils.escapeHtml(token.content)}</code></pre>\n`;
+  };
   return md;
+}
+
+/** 見出しに id を振り、目次を作る(同じ一巡で、同じ slug を二度作らない) */
+function prepareHeadings(tokens) {
+  const seen = new Map();
+  const toc = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (t.type !== "heading_open" || (t.tag !== "h2" && t.tag !== "h3")) continue;
+    const text = tokens[i + 1]?.content ?? "";
+    const base = slugify(text) || "section";
+    const n = seen.get(base) ?? 0;
+    seen.set(base, n + 1);
+    const id = n === 0 ? base : `${base}-${n}`;
+    t.attrSet("id", id);
+    toc.push({ level: Number(t.tag[1]), text, id });
+  }
+  return toc;
 }
 
 /**
@@ -293,8 +318,11 @@ async function main() {
   for (const g of groups) {
     for (const d of g.docs) {
       if (d.rawOnly) continue;
-      const html = md.render(d.body, { doc: d });
-      write(joinUrl(d.url), renderPage({ site: SITE, nav, doc: d, html }));
+      const env = { doc: d };
+      const tokens = md.parse(d.body, env);
+      const toc = prepareHeadings(tokens);
+      const html = md.renderer.render(tokens, md.options, env);
+      write(joinUrl(d.url), renderPage({ site: SITE, nav, doc: d, html, toc, hasMermaid: !!env.hasMermaid }));
     }
   }
 
@@ -393,4 +421,5 @@ function headersFile() {
   ].join("\n");
 }
 
-await main();
+export { makeMd };
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();

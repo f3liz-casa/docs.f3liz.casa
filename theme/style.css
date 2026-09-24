@@ -70,6 +70,42 @@ a:hover { text-decoration: underline; }
 .md table { border-collapse: collapse; width: 100%; }
 .md :is(th, td) { border: 1px solid var(--line); padding: 6px 10px; text-align: left; }
 .md blockquote { margin: 1em 0; padding: .2em 1em; border-left: 3px solid var(--line); color: var(--muted); }
+
+/* 目次(右の柱)。見出しを追いかけて、今の位置を照らす。 */
+.toc {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  flex: 0 0 220px;
+  width: 220px;
+  max-height: 100vh;
+  overflow-y: auto;
+  padding: 32px 24px 32px 0;
+  font-size: 13px;
+}
+.toc ul { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 1px solid var(--line); }
+.toc li { margin: 0 0 8px; }
+.toc li.toc-sub { padding-left: 14px; }
+.toc a { color: var(--muted); }
+.toc a:hover { color: var(--fg); }
+.toc a[aria-current="location"] { color: var(--fg); font-weight: 600; }
+
+/* GitHub の alert(`> [!NOTE]` など) */
+.md .markdown-alert { margin: 1em 0; padding: .6em 1em; border-left: 4px solid var(--line); border-radius: 6px; }
+.md .markdown-alert-title { margin: 0 0 .3em; font-weight: 700; display: flex; align-items: center; gap: .4em; }
+.md .markdown-alert-note { border-color: #4493f8; }
+.md .markdown-alert-note .markdown-alert-title { color: #4493f8; }
+.md .markdown-alert-tip { border-color: #3fb950; }
+.md .markdown-alert-tip .markdown-alert-title { color: #3fb950; }
+.md .markdown-alert-important { border-color: #ab7df8; }
+.md .markdown-alert-important .markdown-alert-title { color: #ab7df8; }
+.md .markdown-alert-warning { border-color: #d29922; }
+.md .markdown-alert-warning .markdown-alert-title { color: #d29922; }
+.md .markdown-alert-caution { border-color: #f85149; }
+.md .markdown-alert-caution .markdown-alert-title { color: #f85149; }
+
+/* mermaid の図 */
+.md pre.mermaid { background: transparent; padding: 0; text-align: center; }
 .src { margin-top: 40px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
 .src .commit { margin-left: 8px; font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
 .md a.ext::after { content: "↗"; font-size: .72em; margin-left: .12em; opacity: .6; }
@@ -90,6 +126,11 @@ a:hover { text-decoration: underline; }
 .cards li { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
 .cards h2 { margin: 0 0 4px; font-size: 17px; }
 .cards p { margin: 0 0 4px; }
+
+/* 狭いと本文が細るので、右の目次は引っ込める(blog.atfedi.de と同じ) */
+@media (max-width: 1024px) {
+  .toc { display: none; }
+}
 
 @media (max-width: 720px) {
   body { display: block; }

@@ -36,8 +36,17 @@ ${description ? `<meta name="description" content="${escape(description)}">` : "
 ${alt}`;
 }
 
+/** 右の柱の目次。見出しを追いかけて、今の位置を照らす(blog.atfedi.de と同じ作法)。 */
+function tocNav(toc) {
+  if (toc.length < 3) return "";
+  const items = toc
+    .map((t) => `<li${t.level === 3 ? ' class="toc-sub"' : ""}><a href="#${t.id}">${escape(t.text)}</a></li>`)
+    .join("");
+  return `<nav class="toc" aria-label="この頁の目次"><ul>${items}</ul></nav>`;
+}
+
 /** 一枚の頁。markdown の隣に raw を置くので、AI はそこを引ける。 */
-export function renderPage({ site, nav, doc, html }) {
+export function renderPage({ site, nav, doc, html, toc = [], hasMermaid = false }) {
   const gh = `https://github.com/${doc.org}/${doc.repo}/blob/${doc.commit}/${doc.path}`;
   const footer = `<footer class="src">
   <a href="${doc.rawUrl}">原文 (Markdown)</a>
@@ -45,6 +54,43 @@ export function renderPage({ site, nav, doc, html }) {
   · <a href="/${doc.prefix}/">${escape(doc.org)}/${escape(doc.repo)} の目次</a>
   <span class="commit">${doc.commit.slice(0, 7)}</span>
 </footer>`;
+  const tocHtml = tocNav(toc);
+  // 目次のある頁だけ、今いる見出しを照らす(素の JS、依存なし)
+  const tocSpy = tocHtml
+    ? `<script>
+{
+  const nav = document.querySelector(".toc");
+  const links = new Map(
+    [...nav.querySelectorAll('a[href^="#"]')].map((a) => [decodeURIComponent(a.hash.slice(1)), a]),
+  );
+  const heads = [...document.querySelectorAll(".md :is(h2, h3)[id]")].filter((h) => links.has(h.id));
+  let current = null;
+  const mark = () => {
+    const line = innerHeight / 3;
+    let id = null;
+    for (const h of heads) {
+      if (h.getBoundingClientRect().top > line) break;
+      id = h.id;
+    }
+    if (id === current) return;
+    if (current !== null) links.get(current)?.removeAttribute("aria-current");
+    if (id !== null) links.get(id)?.setAttribute("aria-current", "location");
+    current = id;
+  };
+  addEventListener("scroll", mark, { passive: true });
+  addEventListener("resize", mark, { passive: true });
+  mark();
+}
+</script>`
+    : "";
+  // mermaid を使う頁だけ、mermaid を読む(使わない頁は一行も増えない)
+  const mermaid = hasMermaid
+    ? `<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+mermaid.initialize({ startOnLoad: false, theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "default" });
+await mermaid.run({ querySelector: ".mermaid" });
+</script>`
+    : "";
   return `<!doctype html>
 <html lang="ja">
 <head>${head(site, doc)}</head>
@@ -53,7 +99,10 @@ ${sidebar(site, nav, doc.url)}
 <main class="doc">
 <article class="md">${html}</article>
 ${footer}
+${mermaid}
 </main>
+${tocHtml}
+${tocSpy}
 </body>
 </html>
 `;
