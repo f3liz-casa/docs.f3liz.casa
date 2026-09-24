@@ -16,27 +16,38 @@ function sidebar(site, nav, current) {
       return `<section><h2><a href="${g.url}">${escape(g.title)}</a></h2><ul>${items}</ul></section>`;
     })
     .join("\n");
-  return `<nav class="side"><p class="brand"><a href="/">${escape(site.title)}</a></p>${groups}</nav>`;
+  return `<nav class="side"><p class="brand"><a href="/">${escape(site.title)}</a></p>${groups}
+<p class="side-foot"><a href="/llms.txt">llms.txt</a> · <a href="/index.json">index.json</a></p></nav>`;
 }
 
-function head(site, title, description) {
+function head(site, doc) {
+  const title = doc?.title ?? site.title;
+  const description = doc?.description;
+  const canonical = doc ? site.base + doc.url : site.base + "/";
+  const alt = doc
+    ? `<link rel="alternate" type="text/markdown" href="${doc.rawUrl}">`
+    : `<link rel="alternate" type="text/markdown" href="/llms.txt" title="llms.txt">`;
   return `<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escape(title)}${title === site.title ? "" : " · " + escape(site.title)}</title>
 ${description ? `<meta name="description" content="${escape(description)}">` : ""}
+<link rel="canonical" href="${canonical}">
 <link rel="stylesheet" href="/style.css">
-<link rel="alternate" type="text/markdown" href="/llms.txt" title="llms.txt">`;
+${alt}`;
 }
 
 /** 一枚の頁。markdown の隣に raw を置くので、AI はそこを引ける。 */
 export function renderPage({ site, nav, doc, html }) {
-  const footer = doc.source
-    ? `<footer class="src">出典 <a href="https://github.com/${doc.source.org}/${doc.source.repo}/blob/${doc.source.commit}/${doc.source.path}">${escape(doc.source.org)}/${escape(doc.source.repo)}/${escape(doc.source.path)}</a>
- · <a href="${doc.rawUrl}">Markdown</a></footer>`
-    : "";
+  const gh = `https://github.com/${doc.org}/${doc.repo}/blob/${doc.commit}/${doc.path}`;
+  const footer = `<footer class="src">
+  <a href="${doc.rawUrl}">原文 (Markdown)</a>
+  · <a href="${gh}">GitHub で見る</a>
+  · <a href="/${doc.prefix}/">${escape(doc.org)}/${escape(doc.repo)} の目次</a>
+  <span class="commit">${doc.commit.slice(0, 7)}</span>
+</footer>`;
   return `<!doctype html>
 <html lang="ja">
-<head>${head(site, doc.title, doc.description)}</head>
+<head>${head(site, doc)}</head>
 <body>
 ${sidebar(site, nav, doc.url)}
 <main class="doc">
@@ -55,13 +66,13 @@ export function renderHome({ site, repos }) {
       (r) => `<li>
   <h2><a href="${r.url}">${escape(r.title)}</a></h2>
   ${r.description ? `<p>${escape(r.description)}</p>` : ""}
-  <p class="meta">${escape(r.org)}/${escape(r.repo)} · ${r.count} 枚</p>
+  <p class="meta"><a href="https://github.com/${r.org}/${r.repo}">${escape(r.org)}/${escape(r.repo)}</a> · ${r.count} 枚</p>
 </li>`,
     )
     .join("\n");
   return `<!doctype html>
 <html lang="ja">
-<head>${head(site, site.title, site.description)}</head>
+<head>${head(site, null)}</head>
 <body class="home">
 <main>
 <h1>${escape(site.title)}</h1>

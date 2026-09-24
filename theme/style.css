@@ -50,6 +50,8 @@ a:hover { text-decoration: underline; }
 .side ul { margin: 0; padding: 0 0 0 10px; list-style: none; }
 .side li { margin: 1px 0; }
 .side a[aria-current="page"] { font-weight: 700; }
+.side-foot { margin: 20px 0 0; padding-top: 10px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+.side-foot a { color: var(--muted); }
 
 .doc {
   flex: 1 1 auto;
@@ -69,6 +71,8 @@ a:hover { text-decoration: underline; }
 .md :is(th, td) { border: 1px solid var(--line); padding: 6px 10px; text-align: left; }
 .md blockquote { margin: 1em 0; padding: .2em 1em; border-left: 3px solid var(--line); color: var(--muted); }
 .src { margin-top: 40px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+.src .commit { margin-left: 8px; font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.md a.ext::after { content: "↗"; font-size: .72em; margin-left: .12em; opacity: .6; }
 .meta { color: var(--muted); font-size: 13px; }
 
 /* Shiki。色は変数で来ているので、どちらを出すかはここが決める(defaultColor: false)。 */

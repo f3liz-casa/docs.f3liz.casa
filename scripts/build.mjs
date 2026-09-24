@@ -25,6 +25,7 @@ const BASE = process.env.DOCS_BASE || "https://docs.f3liz.casa";
 
 const SITE = {
   title: "docs.f3liz.casa",
+  base: BASE,
   description: "f3liz の repo から、散文だけを引いて一枚にした docs。原文はそのまま置いてある。",
 };
 
@@ -110,10 +111,26 @@ function descriptionOf(body) {
 async function makeMd() {
   const md = new MarkdownIt({ html: false, linkify: false, breaks: false, typographer: false });
   md.renderer.rules.link_open = (tokens, idx, opts, env, self) => {
-    const i = tokens[idx].attrIndex("href");
+    const tok = tokens[idx];
+    const i = tok.attrIndex("href");
     if (i >= 0) {
-      const out = resolveLink(tokens[idx].attrs[i][1], env.doc);
-      if (out) tokens[idx].attrs[i][1] = out;
+      const out = resolveLink(tok.attrs[i][1], env.doc);
+      if (out) tok.attrs[i][1] = out;
+      // 外へ出るリンクは、そうと分かるように(印は CSS、別の窓は noopener つきで)
+      if (/^https?:\/\//i.test(tok.attrs[i][1])) {
+        tok.attrSet("rel", "noopener noreferrer");
+        tok.attrSet("target", "_blank");
+        tok.attrJoin("class", "ext");
+      }
+    }
+    return self.renderToken(tokens, idx, opts);
+  };
+  // 見出しに id。節ごとに URL で指せるように(日本語はそのまま、記号だけ - に)
+  md.renderer.rules.heading_open = (tokens, idx, opts, env, self) => {
+    const inline = tokens[idx + 1];
+    if (inline?.type === "inline") {
+      const slug = slugify(inline.content);
+      if (slug) tokens[idx].attrSet("id", slug);
     }
     return self.renderToken(tokens, idx, opts);
   };
@@ -135,15 +152,30 @@ async function makeMd() {
   return md;
 }
 
-/** 相対の .md リンクを site の URL に。site の中の頁に当たらなければ、そのまま */
+/**
+ * 相対リンクの行き先。
+ *   1. site の中の頁(.md で、引いてきた中にある) → site の URL
+ *   2. それ以外で、その repo に実物がある → GitHub の、その commit の URL
+ *   3. どちらでもない → そのまま(触らない)
+ * 「.md じゃないから 404」を作らないのがここの役目。
+ */
 function resolveLink(href, doc) {
   if (!href || /^([a-z][a-z0-9+.-]*:|\/\/|#|\/)/i.test(href)) return null;
-  const [target, hash = ""] = href.split("#");
-  if (!TEXT.test(target)) return null;
-  const abs = path.posix.normalize(path.posix.join(path.posix.dirname(doc.path), decodeURIComponent(target)));
-  const found = doc.index.get(abs);
-  return found ? found.url + (hash ? `#${hash}` : "") : null;
+  const [targetRaw, hash = ""] = href.split("#");
+  if (!targetRaw) return null;
+  const rel = path.posix.normalize(path.posix.join(path.posix.dirname(doc.path), decodeURIComponent(targetRaw)));
+  if (rel.startsWith("..")) return null;
+  if (TEXT.test(rel)) {
+    const found = doc.index.get(rel);
+    if (found) return found.url + (hash ? `#${hash}` : "");
+  }
+  const abs = path.join(doc.root, rel);
+  if (!fs.existsSync(abs)) return null;
+  const kind = fs.statSync(abs).isDirectory() ? "tree" : "blob";
+  return `https://github.com/${doc.org}/${doc.repo}/${kind}/${doc.commit}/${rel}${hash ? `#${hash}` : ""}`;
 }
+const slugify = (s) =>
+  String(s).trim().toLowerCase().replace(/[`*_]/g, "").replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "").slice(0, 80);
 /** 本文が参照している画像を写す。道が repo の外に出るものは、そのまま */
 function copyImage(src, doc) {
   if (!src || /^([a-z][a-z0-9+.-]*:|\/\/|\/|data:)/i.test(src)) return null;
